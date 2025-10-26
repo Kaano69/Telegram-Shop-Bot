@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "telegram-shop"
+version = "0.1.0"
+description = "A Telegram bot for managing a shop."
+authors = ["Your Name <youremail@example.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+aiohttp = "^3.8.1"
+python-telegram-bot = "^20.0"
+sqlalchemy = "^1.4.27"
+asyncpg = "^0.24.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
