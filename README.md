@@ -1,96 +1,112 @@
 # telegram-shop (Scaffold)
 
-Kurz: Dieses Repository enthält ein minimal lauffähiges Gerüst für einen Telegram-Bot (Webhook-Modus), PostgreSQL (async SQLAlchemy) und einen BTCPay-Webhook-Endpoint. Das empfohlene Startverfahren für Anfänger ist Docker Compose.
+Kurz: Minimaler Telegram-Bot (Webhook-Modus) + PostgreSQL + BTCPay-Webhook-Endpoint. Ziel: Jeder soll das Repo klonen und mit Docker + ngrok schnell laufen haben.
 
-Wichtig: Niemals geheime Werte (z. B. TELEGRAM_TOKEN, BTCPAY_API_KEY) in das öffentliche Repository committen. Nutze `.env` (in `.gitignore`).
+Wichtig: Niemals Secrets (z. B. TELEGRAM_TOKEN, BTCPAY_API_KEY) in ein öffentliches Repo committen. Nutze `.env` (ist in `.gitignore`).
 
-Vorbereitung
+## Voraussetzungen
 
-1. Repository klonen:
+- Docker Desktop (Windows) installiert und gestartet
+- Git installiert
+- Optional: ngrok (https://ngrok.com) zum lokalen Testen von Webhooks
 
-   - PowerShell:
-     ```powershell
-     git clone https://github.com/<DEIN_USER>/<DEIN_REPO>.git
-     cd <DEIN_REPO>
-     ```
+## Schnellstart (empfohlen: Docker)
 
-2. Beispiel-Umgebungsdatei anlegen:
-   ```powershell
-   Copy-Item .env.example .env
-   notepad .env
-   ```
-   - Trage mindestens `TELEGRAM_TOKEN` ein.
-   - Für Webhook-Tests lokal mit ngrok: lass `TELEGRAM_WEBHOOK_BASE` leer jetzt — siehe Abschnitt "Telegram Webhook (ngrok)".
+Im Projekt-Root (z. B. `c:\projects\telegram-shop\telegram-shop`):
 
-Start mit Docker (empfohlen)
+1. Repo klonen
 
-1. Docker Desktop installieren (Windows) und starten.
+```powershell
+git clone https://github.com/<DEIN_USER>/<DEIN_REPO>.git
+cd <DEIN_REPO>
+```
 
-2. Projekt mit Docker Compose starten:
+2. Beispiel-Env kopieren und bearbeiten
 
-   ```powershell
-   docker-compose up --build
-   ```
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
 
-   - Service `db` (Postgres) und `app` (Bot) werden gebaut und gestartet.
-   - Logs anzeigen: `docker-compose logs -f app`
+Mindestwerte setzen: `TELEGRAM_TOKEN`. Für lokalen Webhook-Test zunächst `TELEGRAM_WEBHOOK_BASE` leer lassen.
 
-3. Webhook erreichbar machen (ngrok)
-   - Installiere und starte ngrok:
-     ```powershell
-     ngrok http 8443
-     ```
-   - Kopiere die angezeigte HTTPS-URL, z. B. `https://abcd1234.ngrok.io`.
-   - Öffne `.env`, setze:
-     ```
-     TELEGRAM_WEBHOOK_BASE=https://abcd1234.ngrok.io
-     TELEGRAM_WEBHOOK_PATH=/telegram
-     ```
-   - App neu starten, damit der Bot den Webhook setzt:
-     ```powershell
-     docker-compose restart app
-     ```
-   - Alternativ kannst du den Webhook manuell setzen:
-     ```
-     https://api.telegram.org/bot<TELEGRAM_TOKEN>/setWebhook?url=https://abcd1234.ngrok.io/telegram/<TELEGRAM_TOKEN>
-     ```
+3. Docker-Container bauen und starten
 
-Telegram Webhook — Hinweise
+```powershell
+docker-compose up --build -d
+```
 
-- Telegram verlangt eine gültige HTTPS-URL. ngrok ist praktisch zum lokalen Testen.
-- Der Bot setzt den Webhook automatisch beim Start, wenn `TELEGRAM_WEBHOOK_BASE` gesetzt ist. Der Endpoint lautet: `${TELEGRAM_WEBHOOK_BASE}${TELEGRAM_WEBHOOK_PATH}/${TELEGRAM_TOKEN}`
+- Startet `db` (Postgres) und `app` (Bot).
+- Logs ansehen: `docker-compose logs -f app`
 
-Lokal ohne Docker (nur Entwicklung)
+4. (Lokal testen) ngrok starten und Webhook konfigurieren
 
-1. Python 3.11 installieren.
-2. Virtuelle Umgebung und Abhängigkeiten:
-   ```powershell
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   pip install -r requirements.txt
-   ```
+- Starte ngrok:
+
+```powershell
+ngrok http 8443
+```
+
+- Kopiere die HTTPS-URL (z. B. `https://abcd1234.ngrok.io`) und setze in `.env`:
+
+```
+TELEGRAM_WEBHOOK_BASE=https://abcd1234.ngrok.io
+TELEGRAM_WEBHOOK_PATH=/telegram
+```
+
+- App neu starten, damit der Bot den Webhook setzt:
+
+```powershell
+docker-compose restart app
+```
+
+- Alternativ manuell setzen:
+
+```
+https://api.telegram.org/bot<TELEGRAM_TOKEN>/setWebhook?url=https://abcd1234.ngrok.io/telegram/<TELEGRAM_TOKEN>
+```
+
+5. Testen im Telegram:
+
+- Öffne deinen Bot in Telegram und sende `/start` oder `/buy`.
+
+## Lokal ohne Docker (Entwicklung)
+
+1. Python 3.11 installieren
+2. Virtuelle Umgebung & Abhängigkeiten:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
 3. `.env` anlegen und füllen, dann:
-   ```powershell
-   python -m bot.bot
-   ```
 
-Troubleshooting
+```powershell
+python -m bot.bot
+```
 
-- Logs prüfen: `docker-compose logs -f app`
-- DB-Verbindungsfehler: prüfe `DATABASE_URL` in `.env` und ob Postgres läuft.
-- Bot startet, aber keine Updates: Prüfe Webhook-URL, Firewall/Ports, ngrok-URL.
-- `.env` nicht in Git hochladen — `.gitignore` liegt bei.
+## Wichtige Hinweise / Troubleshooting
 
-Was fehlt / nächste Schritte
+- Telegram-Webhooks benötigen HTTPS. Verwende ngrok oder eine echte Domain mit TLS.
+- Prüfe Logs: `docker-compose logs -f app`
+- DB-Fehler: `DATABASE_URL` prüfen und ob Postgres-Container läuft (`docker-compose ps`).
+- `.env` nie committen.
 
-- Implementierung: Order-Erzeugung, BTCPay-API-Client (Invoice mit metadata.orderId), Verifikation des BTCPay-Webhooks und DB-Updates.
-- Optional: Alembic für Migrationen, Tests, CI/CD.
+## Sicherheit & Produktion
 
-Kurz-Fazit
+- Verwende echte Domain + TLS (Let's Encrypt) für Produktion.
+- Schütze BTCPay-Webhook-Endpoint (Signatur/HMAC) — noch zu implementieren.
+- Secrets in CI/CD bzw. Secret-Manager speichern, nicht im Repo.
 
-- Für „einfach kopieren und laufen“: GitHub-Repository klonen, `.env` anlegen, `docker-compose up --build`, ngrok verwenden und `TELEGRAM_WEBHOOK_BASE` setzen. Danach sollte der Bot Webhooks empfangen können.
+## Nächste Schritte (empfohlen)
 
-Wenn gewünscht schreibe ich:
+- Order-Erzeugung und Invoice-Erstellung (BTCPay) implementieren (metadata.orderId).
+- BTCPay-Webhook-Verifikation (HMAC/shared secret) implementieren.
+- Alembic für DB-Migrationen hinzufügen, Tests und CI.
 
-- ein kurzes Script/Entrypoint, das beim Containerstart `create_tables()` sicherstellt (falls noch nötig),
-- oder eine GitHub Actions workflow-Datei, die das Image baut und Tests ausführt.
+Wenn du willst, erstelle ich als nächstes:
+
+- ein kleines Entrypoint-Script, das beim Containerstart `create_tables()` ausführt, oder
+- Scaffolding für BTCPay-Invoice + Webhook-Verifikation.
